@@ -4,12 +4,10 @@
         "config:recommended",
     
         ":pinVersions",
-        ":automergeMinor",
         ":rebaseStalePrs",
     
         "group:linters"
       ],
       "labels": ["dependencies"],
-      "automergeStrategy": "fast-forward",
-      "bumpVersion": "patch"
+      "automergeStrategy": "fast-forward"
   }
