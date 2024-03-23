@@ -1,0 +1,13 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+    
+        ":pinVersions",
+        ":rebaseStalePrs",
+    
+        "group:linters"
+      ],
+      "labels": ["dependencies"],
+      "automergeStrategy": "fast-forward"
+  }
