@@ -34,7 +34,7 @@ jobs:
             echo "skip_release=false" >> "$GITHUB_ENV"
           fi
 
-      - name: Add nightly tag to HEAD
+      - name: Add release tag to HEAD
         if: env.skip_release == 'false'
         run: |
           git tag $tag_name
@@ -82,7 +82,12 @@ jobs:
           UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
         run: ./gradlew bundleRelease
 
-      - name: Upload bundle to the Google Play Consoles closed testing track
+      - name: Signing report
+        if: env.skip_release == 'false'
+        run: ./gradlew signingReport
+
+      - name: Upload bundle to the Google Play Console alpha track
+        if: env.skip_release == 'false'
         uses: r0adkll/upload-google-play@v1
         with:
           packageName: app.musikus
