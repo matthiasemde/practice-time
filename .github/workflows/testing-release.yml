@@ -76,15 +76,15 @@ jobs:
       - name: Build release bundle
         if: env.skip_release == 'false'
         env:
-          UPLOAD_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
-          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
-          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
-          UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          SIGNING_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
+          SIGNING_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
         run: ./gradlew bundleRelease
 
-      - name: Signing report
-        if: env.skip_release == 'false'
-        run: ./gradlew signingReport
+#      - name: Signing report
+#        if: env.skip_release == 'false'
+#        run: ./gradlew signingReport
 
       - name: Upload bundle to the Google Play Console alpha track
         if: env.skip_release == 'false'
