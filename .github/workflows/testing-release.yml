@@ -20,7 +20,7 @@ jobs:
         run: |
           VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
           VERSION_CODE=$(date +"%y%V%u42")
-          TESTING_VERSION_NAME="${VERSION_NAME}-testing{VERSION_CODE}"
+          TESTING_VERSION_NAME="${VERSION_NAME}-testing${VERSION_CODE}"
           TAG_NAME=$TESTING_VERSION_NAME
           echo "version_name=${TESTING_VERSION_NAME}" >> "$GITHUB_ENV"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
