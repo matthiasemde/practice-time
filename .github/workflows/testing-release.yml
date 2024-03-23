@@ -82,14 +82,14 @@ jobs:
           UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
         run: ./gradlew bundleRelease
 
-      - name: Upload bundle to play console closed testing track
+      - name: Upload bundle to the Google Play Consoles closed testing track
         uses: r0adkll/upload-google-play@v1
         with:
           packageName: app.musikus
           serviceAccountJson: ${{ env.SERVICE_ACCOUNT_JSON_PATH }}
           releaseFiles: app/build/outputs/bundle/release/*.aab
           releaseName: ${{ env.TESTING_VERSION_NAME }}
-          track: beta
+          track: alpha
           status: draft
           changesNotSentForReview: true
 
