@@ -1,7 +1,8 @@
 name: TESTING-RELEASE
 
 on:
-  workflow_dispatch
+  schedule:
+    - cron: '0 17 * * 0'
 env:
   JAVA_VERSION: 17
   UPLOAD_KEY_STORE_PATH: ${{ github.workspace }}/keystore.jks
@@ -61,6 +62,7 @@ jobs:
         shell: bash
 
   release:
+    name: Release apk and bundle
     needs: semantic-release
     runs-on: ubuntu-latest
 
@@ -110,20 +112,20 @@ jobs:
         run: |
           ./gradlew bundleRelease
           ./gradlew assembleRelease
-#
-##      - name: Signing report
-##        if: env.skip_release == 'false'
-##        run: ./gradlew signingReport
-#
-#      - name: Release apk on Github
-#        uses: softprops/action-gh-release@v2
-#        with:
-#          draft: false
-#          prerelease: false
-#          generate_release_notes: true
-#          tag_name: ${{ env.tag_name }}
-#          files: |
-#            app/build/outputs/apk/release/*.apk
+
+#      - name: Signing report
+#        if: env.skip_release == 'false'
+#        run: ./gradlew signingReport
+
+      - name: Release apk on Github
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          tag_name: ${{ env.tag_name }}
+          files: |
+            app/build/outputs/apk/release/*.apk
 
       - name: Upload bundle to the Google Play Console alpha track
         uses: r0adkll/upload-google-play@v1
