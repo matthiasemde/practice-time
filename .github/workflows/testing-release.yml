@@ -35,7 +35,8 @@ jobs:
 
       - name: Write version name, version code and tag name to env
         run: |
-          VERSION_NAME=${${{ steps.semver.outputs.next }}#v}
+          SEMANTIC_VERSION=${{ steps.semver.outputs.next }}
+          VERSION_NAME=${SEMANTIC_VERSION#v}
           VERSION_CODE=$(date +"%y%V%u42")
           TAG_NAME="v${VERSION_NAME}"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
