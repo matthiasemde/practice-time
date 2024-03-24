@@ -94,7 +94,6 @@ jobs:
 #        run: ./gradlew signingReport
 
       - name: Upload bundle to the Google Play Console alpha track
-        if: env.skip_release == 'false'
         uses: r0adkll/upload-google-play@v1
         with:
           packageName: app.musikus
