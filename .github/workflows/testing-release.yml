@@ -15,11 +15,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT }}
 
       - name: Get current version name
         run: |
-          VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
-          echo "old_version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
+          CURRENT_VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
+          echo "current_version_name=${CURRENT_VERSION_NAME}" >> "$GITHUB_ENV"
 
       - name: Generate new version name using semver
         id: semver
@@ -28,38 +29,22 @@ jobs:
           token: ${{ github.token }}
           branch: main
           fromTag: "v${{ env.old_version_name }}"
+          noNewCommitBehavior: "silent"
+          noVersionBumpBehavior: "patch"
 
       - name: Echo version name
         run: echo "version_name=${{ steps.semver.outputs.next }}"
 
-      - name: Determine version code/name and tag name for release
+      - name: Write version name, version code and tag name to env
         run: |
-          VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
+          VERSION_NAME=${{ steps.semver.outputs.next }}
           VERSION_CODE=$(date +"%y%V%u42")
-          TESTING_VERSION_NAME="${VERSION_NAME}-testing${VERSION_CODE}"
-          TAG_NAME=$TESTING_VERSION_NAME
-          echo "version_name=${TESTING_VERSION_NAME}" >> "$GITHUB_ENV"
+          TAG_NAME="v${VERSION_NAME}"
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_ENV"    
 
-      - name: Check if release already exists
-        run: |
-          if [[ $(git tag | grep "${{ env.tag_name }}") || $(git tag --points-at HEAD | grep testing) ]]; then
-            echo "skip_release=true" >> "$GITHUB_ENV"
-          else
-            echo "skip_release=false" >> "$GITHUB_ENV"
-          fi
-          echo "skip_release=true" >> "$GITHUB_ENV"
-
-      - name: Add release tag to HEAD
-        if: env.skip_release == 'false'
-        run: |
-          git tag $tag_name
-          git push origin :refs/tags/$tag_name
-          git push origin $tag_name          
-
       - name: Write version name, version code, and commit hash to build.properties
-        if: env.skip_release == 'false'
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           sed -i -e "
@@ -68,50 +53,56 @@ jobs:
             s/commitHash=.*/commitHash=$COMMIT_HASH/
           " build.properties   
 
-      - uses: actions/setup-java@v4
-        if: env.skip_release == 'false'
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Decode keystore
-        if: env.skip_release == 'false'
-        env:
-          ENCODED_STRING: ${{ secrets.UPLOAD_KEY_STORE_BASE64 }}
-          UPLOAD_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
+      - name: Commit version bump and create tag
         run: |
-          echo $ENCODED_STRING | base64 --decode > $UPLOAD_KEY_STORE_PATH
+          git config --global user.email "release-bot@musikus.app"
+          git config --global user.name "Release Bot"
+          git commit -am "Bump version to ${{ env.version_name }}"
+          git tag $tag_name
+          git push origin HEAD:main          
+          git push origin $tag_name
+        shell: bash
 
-      - name: Decode service account json
-        if: env.skip_release == 'false'
-        env:
-          ENCODED_STRING: ${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}
-        run: |
-          echo $ENCODED_STRING | base64 --decode > $SERVICE_ACCOUNT_JSON_PATH
-
-      - name: Build release bundle
-        if: env.skip_release == 'false'
-        env:
-          SIGNING_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
-          SIGNING_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
-        run: ./gradlew bundleRelease
-
-#      - name: Signing report
+#      - uses: actions/setup-java@v4
+#        with:
+#          java-version: ${{ env.JAVA_VERSION }}
+#          distribution: 'temurin'
+#          cache: gradle
+#
+#      - name: Decode keystore
+#        env:
+#          ENCODED_STRING: ${{ secrets.UPLOAD_KEY_STORE_BASE64 }}
+#          UPLOAD_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
+#        run: |
+#          echo $ENCODED_STRING | base64 --decode > $UPLOAD_KEY_STORE_PATH
+#
+#      - name: Decode service account json
+#        env:
+#          ENCODED_STRING: ${{ secrets.SERVICE_ACCOUNT_JSON_BASE64 }}
+#        run: |
+#          echo $ENCODED_STRING | base64 --decode > $SERVICE_ACCOUNT_JSON_PATH
+#
+#      - name: Build release bundle
+#        env:
+#          SIGNING_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
+#          SIGNING_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+#          SIGNING_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+#          SIGNING_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+#        run: ./gradlew bundleRelease
+#
+##      - name: Signing report
+##        if: env.skip_release == 'false'
+##        run: ./gradlew signingReport
+#
+#      - name: Upload bundle to the Google Play Console alpha track
 #        if: env.skip_release == 'false'
-#        run: ./gradlew signingReport
-
-      - name: Upload bundle to the Google Play Console alpha track
-        if: env.skip_release == 'false'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          packageName: app.musikus
-          serviceAccountJson: ${{ env.SERVICE_ACCOUNT_JSON_PATH }}
-          releaseFiles: app/build/outputs/bundle/release/*.aab
-          releaseName: ${{ env.TESTING_VERSION_NAME }}
-          track: alpha
-          status: draft
-          changesNotSentForReview: true
+#        uses: r0adkll/upload-google-play@v1
+#        with:
+#          packageName: app.musikus
+#          serviceAccountJson: ${{ env.SERVICE_ACCOUNT_JSON_PATH }}
+#          releaseFiles: app/build/outputs/bundle/release/*.aab
+#          releaseName: ${{ env.TESTING_VERSION_NAME }}
+#          track: alpha
+#          status: draft
+#          changesNotSentForReview: true
 
