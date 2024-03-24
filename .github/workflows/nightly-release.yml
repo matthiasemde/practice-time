@@ -38,7 +38,6 @@ jobs:
         if: env.skip_nightly == 'false'
         run: |
           git tag $tag_name
-          git push origin :refs/tags/$tag_name
           git push origin $tag_name
 
       - name: Write version name, version code, and commit hash to build.properties
