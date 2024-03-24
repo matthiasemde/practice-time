@@ -16,6 +16,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate new version name using semver
+        id: semver
+        uses: ietf-tools/semver-action@v1
+        with:
+          token: ${{ github.token }}
+          branch: main
+
+      - name: Echo version name
+        run: echo "version_name=${{ steps.semver.outputs.next }}"
+
       - name: Determine version code/name and tag name for release
         run: |
           VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
@@ -33,6 +43,7 @@ jobs:
           else
             echo "skip_release=false" >> "$GITHUB_ENV"
           fi
+          echo "skip_release=true" >> "$GITHUB_ENV"
 
       - name: Add release tag to HEAD
         if: env.skip_release == 'false'
