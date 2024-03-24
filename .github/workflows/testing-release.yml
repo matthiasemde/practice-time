@@ -14,6 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
@@ -32,12 +33,9 @@ jobs:
           noNewCommitBehavior: "silent"
           noVersionBumpBehavior: "patch"
 
-      - name: Echo version name
-        run: echo "version_name=${{ steps.semver.outputs.next }}"
-
       - name: Write version name, version code and tag name to env
         run: |
-          VERSION_NAME=${{ steps.semver.outputs.next }}
+          VERSION_NAME=${${{ steps.semver.outputs.next }}#v}
           VERSION_CODE=$(date +"%y%V%u42")
           TAG_NAME="v${VERSION_NAME}"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
