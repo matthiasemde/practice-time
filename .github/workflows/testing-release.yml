@@ -28,7 +28,7 @@ jobs:
         with:
           token: ${{ github.token }}
           branch: main
-          fromTag: "v${{ env.old_version_name }}"
+          fromTag: v${{ env.current_version_name }}
           noNewCommitBehavior: "silent"
           noVersionBumpBehavior: "patch"
 
