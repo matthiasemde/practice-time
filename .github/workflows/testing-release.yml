@@ -7,8 +7,8 @@ env:
   UPLOAD_KEY_STORE_PATH: ${{ github.workspace }}/keystore.jks
   SERVICE_ACCOUNT_JSON_PATH: ${{ github.workspace }}/service-account.json
 jobs:
-  release:
-    name: Release to play console closed testing track
+  semantic-release:
+    name: Semantic release
     runs-on: ubuntu-latest
 
     steps:
@@ -43,13 +43,11 @@ jobs:
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_ENV"    
 
-      - name: Write version name, version code, and commit hash to build.properties
+      - name: Write version name and version code to build.properties
         run: |
-          COMMIT_HASH=$(git rev-parse --short HEAD)
           sed -i -e "
             s/versionName=.*/versionName=$version_name/
             s/versionCode=.*/versionCode=$version_code/
-            s/commitHash=.*/commitHash=$COMMIT_HASH/
           " build.properties   
 
       - name: Commit version bump and create tag
@@ -61,6 +59,28 @@ jobs:
           git push origin HEAD:main          
           git push origin $tag_name
         shell: bash
+
+  release:
+    needs: semantic-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get version name, code and tag
+        run: |
+          VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep "versionCode" build.properties | cut -d'=' -f2)
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "tag_name=v${VERSION_NAME}" >> "$GITHUB_ENV"
+
+      - name: Write commit hash to build.properties
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          sed -i "s/commitHash=.*/commitHash=$COMMIT_HASH/" build.properties
 
       - uses: actions/setup-java@v4
         with:
@@ -90,20 +110,20 @@ jobs:
         run: |
           ./gradlew bundleRelease
           ./gradlew assembleRelease
-
-#      - name: Signing report
-#        if: env.skip_release == 'false'
-#        run: ./gradlew signingReport
-
-      - name: Release apk on Github
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          tag_name: ${{ env.tag_name }}
-          files: |
-            app/build/outputs/apk/release/*.apk
+#
+##      - name: Signing report
+##        if: env.skip_release == 'false'
+##        run: ./gradlew signingReport
+#
+#      - name: Release apk on Github
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          draft: false
+#          prerelease: false
+#          generate_release_notes: true
+#          tag_name: ${{ env.tag_name }}
+#          files: |
+#            app/build/outputs/apk/release/*.apk
 
       - name: Upload bundle to the Google Play Console alpha track
         uses: r0adkll/upload-google-play@v1
@@ -114,5 +134,3 @@ jobs:
           releaseName: ${{ env.version_name }}
           track: alpha
           status: draft
-          changesNotSentForReview: true
-
