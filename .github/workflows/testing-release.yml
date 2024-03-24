@@ -81,17 +81,29 @@ jobs:
         run: |
           echo $ENCODED_STRING | base64 --decode > $SERVICE_ACCOUNT_JSON_PATH
 
-      - name: Build release bundle
+      - name: Build release apk and bundle
         env:
           SIGNING_KEY_STORE_PATH: ${{ env.UPLOAD_KEY_STORE_PATH }}
           SIGNING_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
-        run: ./gradlew bundleRelease
+        run: |
+          ./gradlew bundleRelease
+          ./gradlew assembleRelease
 
 #      - name: Signing report
 #        if: env.skip_release == 'false'
 #        run: ./gradlew signingReport
+
+      - name: Release apk on Github
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          tag_name: ${{ env.tag_name }}
+          files: |
+            app/build/outputs/apk/release/*.apk
 
       - name: Upload bundle to the Google Play Console alpha track
         uses: r0adkll/upload-google-play@v1
@@ -99,7 +111,7 @@ jobs:
           packageName: app.musikus
           serviceAccountJson: ${{ env.SERVICE_ACCOUNT_JSON_PATH }}
           releaseFiles: app/build/outputs/bundle/release/*.aab
-          releaseName: ${{ env.TESTING_VERSION_NAME }}
+          releaseName: ${{ env.version_name }}
           track: alpha
           status: draft
           changesNotSentForReview: true
