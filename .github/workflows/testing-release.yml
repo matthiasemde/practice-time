@@ -16,12 +16,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get current version name
+        run: |
+          VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
+          echo "old_version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
+
       - name: Generate new version name using semver
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
           branch: main
+          fromTag: "v${{ env.old_version_name }}"
 
       - name: Echo version name
         run: echo "version_name=${{ steps.semver.outputs.next }}"
