@@ -1,6 +1,7 @@
 name: TESTING-RELEASE
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 17 * * 0'
 env:
