@@ -52,14 +52,31 @@ jobs:
             s/versionCode=.*/versionCode=$version_code/
           " build.properties   
 
-      - name: Commit version bump and create tag
+      - name: Add tag to repository
+        run: |
+          git tag $tag_name
+          git push origin $tag_name
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          fromTag: v${{ env.current_version_name }}
+          toTag: ${{ env.tag_name }}
+          excludeTypes: build,docs,other,style,ci,chore
+
+      - name: Print Changelog
+        run: |
+          echo "${{ steps.changelog.outputs.changelog }}"
+          cat CHANGELOG.md
+        
+      - name: Commit changes
         run: |
           git config --global user.email "release-bot@musikus.app"
           git config --global user.name "Release Bot"
           git commit -am "chore: bump version to ${{ env.version_name }}"
-          git tag $tag_name
-          git push origin HEAD:main          
-          git push origin $tag_name
+          git push origin HEAD:main
         shell: bash
 
   github-release:
