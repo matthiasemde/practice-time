@@ -5,8 +5,9 @@ on:
     - cron: '0 17 * * 0'
 env:
   JAVA_VERSION: 17
-  UPLOAD_KEY_STORE_PATH: ${{ github.workspace }}/keystore.jks
-  SERVICE_ACCOUNT_JSON_PATH: ${{ github.workspace }}/service-account.json
+  UPLOAD_KEY_STORE_PATH: ${{ github.workspace }}/upload_keystore.jks
+  SIGNING_KEY_STORE_PATH: ${{ github.workspace }}/signing_keystore.jks
+  SERVICE_ACCOUNT_JSON_PATH: ${{ github.workspace }}/service_account.json
 jobs:
   semantic-release:
     name: Semantic release
@@ -61,8 +62,63 @@ jobs:
           git push origin $tag_name
         shell: bash
 
-  release:
-    name: Release apk and bundle
+  github-release:
+    name: Release apk to Github
+    needs: semantic-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get version name, code and tag
+        run: |
+          VERSION_NAME=$(grep "versionName" build.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep "versionCode" build.properties | cut -d'=' -f2)
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
+          echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "tag_name=v${VERSION_NAME}" >> "$GITHUB_ENV"
+
+      - name: Write commit hash to build.properties
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          sed -i "s/commitHash=.*/commitHash=$COMMIT_HASH/" build.properties
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Decode keystore
+        env:
+          ENCODED_STRING: ${{ secrets.SIGNING_KEY_STORE_BASE64 }}
+          SIGNING_KEY_STORE_PATH: ${{ env.SIGNING_KEY_STORE_PATH }}
+        run: |
+          echo $ENCODED_STRING | base64 --decode > $SIGNING_KEY_STORE_PATH
+
+      - name: Build apk
+        env:
+          SIGNING_KEY_STORE_PATH: ${{ env.SIGNING_KEY_STORE_PATH }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease
+
+      - name: Release apk on Github
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          tag_name: ${{ env.tag_name }}
+          files: |
+            app/build/outputs/apk/release/*.apk
+
+  play-release:
+    name: Release bundle to Google Play
     needs: semantic-release
     runs-on: ubuntu-latest
 
@@ -116,16 +172,6 @@ jobs:
 #      - name: Signing report
 #        if: env.skip_release == 'false'
 #        run: ./gradlew signingReport
-
-      - name: Release apk on Github
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          tag_name: ${{ env.tag_name }}
-          files: |
-            app/build/outputs/apk/release/*.apk
 
       - name: Upload bundle to the Google Play Console alpha track
         uses: r0adkll/upload-google-play@v1
