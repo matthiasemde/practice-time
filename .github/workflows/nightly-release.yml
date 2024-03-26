@@ -2,7 +2,7 @@ name: NIGHTLY-RELEASE
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 4 * * 1-6'
 env:
   JAVA_VERSION: 17
   SIGNING_KEY_STORE_PATH: ${{ github.workspace }}/keystore.jks
