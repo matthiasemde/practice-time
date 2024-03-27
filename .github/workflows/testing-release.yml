@@ -55,6 +55,7 @@ jobs:
         run: |
           echo ${{ secrets.RELEASE_BOT_SIGNING_KEY_BASE64  }} | base64 --decode > $RELEASE_BOT_SIGNING_KEY_PATH
           echo ${{ secrets.RELEASE_BOT_SIGNING_PUBLIC_KEY_BASE64  }} | base64 --decode > $RELEASE_BOT_SIGNING_PUBLIC_KEY_PATH
+          chmod 600 $RELEASE_BOT_SIGNING_KEY_PATH
 
       - name: Configure git
         run: |
