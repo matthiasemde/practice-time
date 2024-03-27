@@ -102,6 +102,10 @@ jobs:
           git push origin HEAD:main
           git push origin $tag_name
 
+    outputs:
+      release_notes: ${{ steps.changelog.outputs.changes }}
+
+
   #
   #  ----------  Release to Github  ------------
   #
@@ -153,7 +157,7 @@ jobs:
       - name: Release apk on Github
         uses: softprops/action-gh-release@v2
         with:
-          body_path: ${{ env.CHANGELOG_FILE_PATH }}
+          body: ${{ needs.semantic-release.outputs.changes }}
           tag_name: ${{ env.tag_name }}
           files: |
             app/build/outputs/apk/release/*.apk
