@@ -74,7 +74,9 @@ jobs:
 
       - name: Add tag to repository
         run: |
-          git tag $tag_name
+          MESSAGES=("Beep Boop! New release coming through! 🤖" "I'm a bot and I approved this release. 🚀" "Another day, another tag. Life as a bot is exciting! 🎉" "Automated Release: I'm just a bot, but I'm pretty sure this is a good one! 🤖" "Release ready! All systems are go. 🚀" "New release deployed. I hope humans like it! 🎉" "Tag, you're it! New release out. 🏷️" "Just another day in the life of a release bot. Enjoy the new version! 📦")
+          INDEX=$(( RANDOM % ${#MESSAGES[@]} ))
+          git tag $tag_name -m "${MESSAGES[$INDEX]}"
           git push origin $tag_name
 
       - name: Update CHANGELOG
