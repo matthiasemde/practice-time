@@ -20,6 +20,8 @@ jobs:
   semantic-release:
     name: Semantic release
     runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changes }}
 
     steps:
       - uses: actions/checkout@v4
@@ -104,12 +106,8 @@ jobs:
 
       - name: Push changes and tag to the repository
         run: |
-          git status
           git push origin HEAD:main
           git push origin $tag_name
-
-    outputs:
-      release_notes: ${{ steps.changelog.outputs.changes }}
 
 
   #
@@ -163,7 +161,7 @@ jobs:
       - name: Release apk on Github
         uses: softprops/action-gh-release@v2
         with:
-          body: ${{ needs.semantic-release.outputs.changes }}
+          body: ${{ needs.semantic-release.outputs.changelog }}
           tag_name: ${{ env.tag_name }}
           files: |
             app/build/outputs/apk/release/*.apk
