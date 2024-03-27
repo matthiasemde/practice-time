@@ -90,6 +90,7 @@ jobs:
           restrictToTypes: fix,feat
 
       - name: Remove temporary tag
+        if: always()
         run: |
           git tag -d $tag_name
           git push origin :refs/tags/$tag_name
