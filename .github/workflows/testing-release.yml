@@ -73,32 +73,42 @@ jobs:
             s/versionCode=.*/versionCode=$version_code/
           " build.properties   
 
-      - name: Add tag to repository
+      - name: Add temporary tag
         run: |
-          MESSAGES=("Beep Boop! New release coming through! 🤖" "I'm a bot and I approved this release. 🚀" "Another day, another tag. Life as a bot is exciting! 🎉" "Automated Release: I'm just a bot, but I'm pretty sure this is a good one! 🤖" "Release ready! All systems are go. 🚀" "New release deployed. I hope humans like it! 🎉" "Tag, you're it! New release out. 🏷️" "Just another day in the life of a release bot. Enjoy the new version! 📦")
-          INDEX=$(( RANDOM % ${#MESSAGES[@]} ))
-          git tag $tag_name -m "${MESSAGES[$INDEX]}"
-          git push origin $tag_name
+          git tag tmp_release_tag -m "temporary tag used by requarks/changelog-action"
+          git push origin tmp_release_tag
 
       - name: Update CHANGELOG
         id: changelog
         uses: requarks/changelog-action@v1
         with:
           token: ${{ github.token }}
-          fromTag: v${{ env.current_version_name }}
-          toTag: ${{ env.tag_name }}
+          fromTag: tmp_release_tag
+          toTag: v${{ env.current_version_name }}
           excludeTypes: build,docs,other,style,ci,chore
 
       - name: Print Changelog
         run: |
           echo "${{ steps.changelog.outputs.changelog }}"
           cat CHANGELOG.md
-        
+
       - name: Commit changes
         run: |
           git commit -am "chore: bump version to ${{ env.version_name }}"
           git push origin HEAD:main
         shell: bash
+
+      - name: Add release tag to repository
+        run: |
+          MESSAGES=("Beep Boop! New release coming through! 🤖" "I'm a bot and I approved this release. 🚀" "Another day, another tag. Life as a bot is exciting! 🎉" "Automated Release: I'm just a bot, but I'm pretty sure this is a good one! 🤖" "Release ready! All systems are go. 🚀" "New release deployed. I hope humans like it! 🎉" "Tag, you're it! New release out. 🏷️" "Just another day in the life of a release bot. Enjoy the new version! 📦")
+          INDEX=$(( RANDOM % ${#MESSAGES[@]} ))
+          git tag $tag_name -m "${MESSAGES[$INDEX]}"
+          git push origin $tag_name
+
+      - name: Clean up temporary tag
+        if: always()
+        run: |
+          git push origin :refs/tags/tmp_release_tag
 
   #
   #  ----------  Release to Github  ------------
