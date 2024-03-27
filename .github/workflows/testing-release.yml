@@ -9,7 +9,13 @@ env:
   UPLOAD_KEY_STORE_PATH: ${{ github.workspace }}/upload_keystore.jks
   SIGNING_KEY_STORE_PATH: ${{ github.workspace }}/signing_keystore.jks
   SERVICE_ACCOUNT_JSON_PATH: ${{ github.workspace }}/service_account.json
+  RELEASE_BOT_SIGNING_KEY_PATH: ${{ github.workspace }}/signing_key
+  RELEASE_BOT_SIGNING_PUBLIC_KEY_PATH: ${{ github.workspace }}/signing_key.pub
 jobs:
+
+  #
+  #  ----------  Perform semantic versioning  ------------
+  #
   semantic-release:
     name: Semantic release
     runs-on: ubuntu-latest
@@ -33,7 +39,7 @@ jobs:
           token: ${{ github.token }}
           branch: main
           fromTag: v${{ env.current_version_name }}
-          noNewCommitBehavior: "silent"
+          noNewCommitBehavior: "error"
           noVersionBumpBehavior: "patch"
 
       - name: Write version name, version code and tag name to env
@@ -41,14 +47,27 @@ jobs:
           SEMANTIC_VERSION=${{ steps.semver.outputs.next }}
           VERSION_NAME=${SEMANTIC_VERSION#v}
           VERSION_CODE=$(date +"%y%V%u42")
-          TAG_NAME="v${VERSION_NAME}"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_ENV"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_ENV"
-          echo "tag_name=${TAG_NAME}" >> "$GITHUB_ENV"    
+          echo "tag_name=${SEMANTIC_VERSION}" >> "$GITHUB_ENV"    
+
+      - name: Decode release bot public and private signing key
+        run: |
+          echo ${{ secrets.RELEASE_BOT_SIGNING_KEY_BASE64  }} | base64 --decode > $RELEASE_BOT_SIGNING_KEY_PATH
+          echo ${{ secrets.RELEASE_BOT_SIGNING_PUBLIC_KEY_BASE64  }} | base64 --decode > $RELEASE_BOT_SIGNING_PUBLIC_KEY_PATH
+
+      - name: Configure git
+        run: |
+          git config user.email "release-bot@musikus.app"
+          git config user.name "Release Bot"
+          git config gpg.format ssh
+          git config user.signingkey $RELEASE_BOT_SIGNING_PUBLIC_KEY_PATH
+          git config commit.gpgsign true
+          git config tag.gpgsign true
 
       - name: Write version name and version code to build.properties
         run: |
-          sed -i -e "
+          sed -i "
             s/versionName=.*/versionName=$version_name/
             s/versionCode=.*/versionCode=$version_code/
           " build.properties   
@@ -74,12 +93,13 @@ jobs:
         
       - name: Commit changes
         run: |
-          git config --global user.email "release-bot@musikus.app"
-          git config --global user.name "Release Bot"
           git commit -am "chore: bump version to ${{ env.version_name }}"
           git push origin HEAD:main
         shell: bash
 
+  #
+  #  ----------  Release to Github  ------------
+  #
   github-release:
     name: Release apk to Github
     needs: semantic-release
@@ -135,6 +155,9 @@ jobs:
           files: |
             app/build/outputs/apk/release/*.apk
 
+  #
+  #  ----------  Release to Google Play  ------------
+  #
   play-release:
     name: Release bundle to Google Play
     needs: semantic-release
@@ -186,10 +209,6 @@ jobs:
         run: |
           ./gradlew bundleRelease
           ./gradlew assembleRelease
-
-#      - name: Signing report
-#        if: env.skip_release == 'false'
-#        run: ./gradlew signingReport
 
       - name: Upload bundle to the Google Play Console alpha track
         uses: r0adkll/upload-google-play@v1
