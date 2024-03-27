@@ -11,6 +11,7 @@ env:
   SERVICE_ACCOUNT_JSON_PATH: ${{ github.workspace }}/service_account.json
   RELEASE_BOT_SIGNING_KEY_PATH: ${{ github.workspace }}/signing_key
   RELEASE_BOT_SIGNING_PUBLIC_KEY_PATH: ${{ github.workspace }}/signing_key.pub
+  CHANGELOG_FILE_PATH: ${{ github.workspace }}/CHANGELOG.md
 jobs:
 
   #
@@ -84,6 +85,7 @@ jobs:
         id: changelog
         uses: requarks/changelog-action@v1
         with:
+          changelogFilePath: ${{ env.CHANGELOG_FILE_PATH }}
           token: ${{ github.token }}
           fromTag: ${{ env.tag_name }}
           toTag: v${{ env.current_version_name }}
@@ -151,9 +153,7 @@ jobs:
       - name: Release apk on Github
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+          body_path: ${{ env.CHANGELOG_FILE_PATH }}
           tag_name: ${{ env.tag_name }}
           files: |
             app/build/outputs/apk/release/*.apk
