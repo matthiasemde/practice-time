@@ -74,12 +74,10 @@ jobs:
             s/versionCode=.*/versionCode=$version_code/
           " build.properties   
 
-      - name: Commit changes and add a release tag
+      - name: Add release tag to remote
         run: |
-          git commit -am "chore: bump version to ${{ env.version_name }}"
-          MESSAGES=("Beep Boop! New release coming through! 🤖" "I'm a bot and I approved this release. 🚀" "Another day, another tag. Life as a bot is exciting! 🎉" "Automated Release: I'm just a bot, but I'm pretty sure this is a good one! 🤖" "Release ready! All systems are go. 🚀" "New release deployed. I hope humans like it! 🎉" "Tag, you're it! New release out. 🏷️" "Just another day in the life of a release bot. Enjoy the new version! 📦")
-          INDEX=$(( RANDOM % ${#MESSAGES[@]} ))
-          git tag $tag_name -m "${MESSAGES[$INDEX]}"
+          git tag $tag_name -m "Temporary tag used by requarks/changelog-action@v1"
+          git push origin $tag_name
 
       - name: Update CHANGELOG
         id: changelog
@@ -91,14 +89,21 @@ jobs:
           toTag: v${{ env.current_version_name }}
           restrictToTypes: fix,feat
 
-      - name: Amend commit with CHANGELOG
+      - name: Remove temporary tag
         run: |
-          git add CHANGELOG.md
-          git commit --amend --no-edit
-          git status
+          git tag -d $tag_name
+          git push origin :refs/tags/$tag_name
+
+      - name: Commit changes and add a release tag
+        run: |
+          git commit -am "chore: bump version to ${{ env.version_name }}"
+          MESSAGES=("Beep Boop! New release coming through! 🤖" "I'm a bot and I approved this release. 🚀" "Another day, another tag. Life as a bot is exciting! 🎉" "Automated Release: I'm just a bot, but I'm pretty sure this is a good one! 🤖" "Release ready! All systems are go. 🚀" "New release deployed. I hope humans like it! 🎉" "Tag, you're it! New release out. 🏷️" "Just another day in the life of a release bot. Enjoy the new version! 📦")
+          INDEX=$(( RANDOM % ${#MESSAGES[@]} ))
+          git tag $tag_name -m "${MESSAGES[$INDEX]}"
 
       - name: Push changes and tag to the repository
         run: |
+          git status
           git push origin HEAD:main
           git push origin $tag_name
 
